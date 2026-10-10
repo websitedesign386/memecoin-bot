@@ -1,0 +1,5 @@
+.env
+*.jsonl
+__pycache__/
+.venv/
+.pytest_cache/
