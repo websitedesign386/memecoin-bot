@@ -49,7 +49,7 @@ Switch strategy with `--strategy volume_breakout`. All thresholds live in `.env`
 | **Paper ≠ live** | Paper fills at the quoted price minus a flat cost. Live fills are worse, transactions fail, and some tokens can't be sold. |
 | **Live sell sizing** | Live mode tracks the *quoted* token amount from the buy. Small differences from the actual fill are possible. |
 | **API limits** | DexScreener, RugCheck, and public RPCs rate-limit. Data can lag by seconds to minutes. |
-| **No historical backtest** | Free tick-level memecoin history barely exists. Paper trading forward is the realistic test. |
+| **Backtest data** | Free tick-level pump.fun/PumpSwap history exists at replay.pumpapi.io (since Apr 2026). Backtester not built yet. |
 | **AI sentiment** | Grok can be fooled by bot/shill activity and can hallucinate. It's used only as a veto. |
 | **Taxes & law** | Every swap is a taxable event in many countries (including the US). Know your local rules. |
 | **Key security** | A leaked private key empties the wallet instantly. Never commit `.env`. Never reuse your main wallet. |
@@ -58,6 +58,7 @@ Switch strategy with `--strategy volume_breakout`. All thresholds live in `.env`
 
 - [`docs/RESEARCH.md`](docs/RESEARCH.md): GitHub repos reviewed, which are worth learning from, and scam red flags
 - [`docs/STRATEGIES.md`](docs/STRATEGIES.md): every common strategy and whether it works with this bot
+- [`docs/PLAN.md`](docs/PLAN.md): win-rate/EV analysis, how snipers are fast, the chosen strategy and roadmap
 - [`docs/GROK.md`](docs/GROK.md): what Grok adds, how it's wired in, and its limits
 
 ## Layout
