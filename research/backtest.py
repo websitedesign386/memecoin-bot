@@ -74,6 +74,7 @@ class Token:
     bundle_tokens: float = 0.0
     last_eval: int = 0
     unsafe_auth: bool = False
+    smart_buys: deque = field(default_factory=deque)  # (ts, wallet) buys by known pro wallets
 
     def window(self, now: int, secs: int):
         lo = now - secs * 1000
@@ -195,7 +196,39 @@ def final_stretch(tk: Token, now: int) -> str | None:
     return f"curve {prog:.0%} buyers5m {s['buyers']}"
 
 
+def early_trench(tk: Token, now: int) -> str | None:
+    """Mirror the profitable-wallet profile: 1.5-10 min old, 100-800 SOL mcap, broad organic buying."""
+    if tk.created_ts is None:
+        return None
+    age = now - tk.created_ts
+    if not (1.5 * MIN <= age <= 10 * MIN) or not (100 <= tk.mcap <= 800):
+        return None
+    s1, s5 = tk.stats(now, 60), tk.stats(now, 300)
+    if s5["buyers"] < 25 or s1["buy_sol"] < 1.5 * max(s1["sell_sol"], 1e-9) or s1["buyers"] < 6:
+        return None
+    if not common_filters(tk):
+        return None
+    return f"age {age / MIN:.1f}m mcap {tk.mcap:.0f} buyers5m {s5['buyers']}"
+
+
+def smart_convergence(tk: Token, now: int) -> str | None:
+    """>= 2 distinct known-profitable wallets bought within the last 5 minutes."""
+    lo = now - 5 * MIN
+    while tk.smart_buys and tk.smart_buys[0][0] < lo:
+        tk.smart_buys.popleft()
+    wallets = {w for _, w in tk.smart_buys}
+    if len(wallets) < 2 or not (60 <= tk.mcap <= 3000):
+        return None
+    if not common_filters(tk):
+        return None
+    return f"{len(wallets)} smart wallets in 5m, mcap {tk.mcap:.0f}"
+
+
+SMART: set[str] = set()
+
 STRATEGIES: dict[str, Callable[[Token, int], str | None]] = {
+    "early_trench": early_trench,
+    "smart_convergence": smart_convergence,
     "migrated_momentum": migrated_momentum,
     "first_pullback": first_pullback,
     "final_stretch": final_stretch,
@@ -340,6 +373,8 @@ def run(files: list[Path], ex: Exec, xs: Exits, strategies=STRATEGIES, eval_ever
                 if is_buy and tk.create_block is not None and r["block"] == tk.create_block:
                     tk.bundle_tokens += r["tokens"]
                 creator_sold = (not is_buy) and trader == tk.creator
+                if is_buy and trader in SMART:
+                    tk.smart_buys.append((now, trader))
                 tk.flow.append((now, is_buy, r["sol"] or 0.0, trader, tk.price))
                 lo = now - 3600_000
                 while tk.flow and tk.flow[0][0] < lo:
@@ -399,11 +434,17 @@ def main() -> None:
     ap.add_argument("--end")
     ap.add_argument("--split", action="store_true", help="report first and second half separately")
     ap.add_argument("--latency", type=float, default=1.5)
+    ap.add_argument("--smart", help="CSV of pro wallets (index = wallet) for smart_convergence; build it from EARLIER hours only")
     a = ap.parse_args()
     files = hour_files(a.start, a.end)
     if not files:
         raise SystemExit("no data — run python -m research.ingest first")
     ex, xs = Exec(latency_s=a.latency), Exits()
+    if a.smart:
+        import csv
+        with open(a.smart) as fh:
+            SMART.update(row[0] for i, row in enumerate(csv.reader(fh)) if i and row)
+        print(f"loaded {len(SMART)} smart wallets")
     print(f"{len(files)} hours: {files[0].parent.name} {files[0].stem}h → {files[-1].parent.name} {files[-1].stem}h, "
           f"size {ex.size_sol} SOL, latency {ex.latency_s}s")
     parts = [files[: len(files) // 2], files[len(files) // 2:]] if a.split else [files]

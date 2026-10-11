@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
 
-from .backtest import DATA
+from .backtest import DATA, hour_files
 
 COLS = ["ts", "action", "pool", "mint", "trader", "sol", "tokens", "mcap_sol", "price", "pool_created_by", "creator"]
 
@@ -110,8 +110,10 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--kol", help="kolscan leaderboard JSON (wallet_address, name, twitter)")
     ap.add_argument("--out", default="data/wallet_study")
+    ap.add_argument("--start", help="first hour, e.g. 2026-10-09T00")
+    ap.add_argument("--end", help="end hour (exclusive)")
     a = ap.parse_args()
-    files = sorted(DATA.glob("*/*.parquet"))
+    files = hour_files(a.start, a.end)
     pos, ev, px = load_positions(files)
     p = enrich(pos, ev, px)
     w = wallet_table(p)
@@ -139,6 +141,7 @@ def main() -> None:
         kol = pd.DataFrame(json.load(open(a.kol)))
         kol = kol.drop_duplicates("wallet_address").set_index("wallet_address")
         seen = w.index.intersection(kol.index)
+        seen = seen[w.loc[seen].tokens <= 400]  # drop bot-sized wallets (e.g. "Mayhem Bot")
         print(f"\nKOLs from leaderboard seen trading in window: {len(seen)} / {len(kol)}")
         if len(seen):
             k = w.loc[seen].join(kol[["name", "twitter"]]).sort_values("pnl", ascending=False)
