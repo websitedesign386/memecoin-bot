@@ -85,3 +85,13 @@ X watcher (Grok / X API / tweet tracker) ─► CA-mention + narrative score
 - Scraping KolScan, GMGN or Axiom (as kol-quest does with Playwright) may break their terms. Prefer on-chain data + official APIs.
 - Copying KOLs makes us their exit liquidity. We learn their *selection logic*; we don't mirror their trades.
 - The leaderboard numbers above are one scraped snapshot and unverified. The archive study replaces them with real measurements.
+
+## 6. Trencher tools: what each gives the bot
+
+| Tool | What trenchers use it for | Bot access | How we use it |
+|---|---|---|---|
+| **J7 Tracker** | Fast X/social feed next to a deploy/snipe/sell terminal | HTTP API (`POST /submit` for trades, plus a "feed" section) per [docs](https://docs.j7tracker.io/docs) / [Xanguard](https://xanguard.tech/blog/j7tracker-alternative/); unverified | **Social feed as a buzz signal**, if the API exposes it. Not for execution (~1% fee, and it's built for launching and bundling tokens). Beware the unrelated "J7" memecoin and fake sites. |
+| **Cielo** | Live feed of tracked wallets' trades, wallet PnL | API: free 5k credits; Builder ~$89/mo; Architect ~$188/mo ([API info](https://api-info.cielo.finance/), [docs](https://docs.cielo.finance/)) | **Wallet PnL to pick which pros to study.** Smart-wallet convergence can be built free from the on-chain stream. |
+| **Axiom** | Pulse columns, filters, charts, trading | **No public trading API** | Manual monitoring only. Automating the website would be fragile, need your Axiom login, and likely break its terms. |
+| **KolScan / GMGN** | KOL leaderboards, smart-money lists | No official API (scraped by kol-quest) | Seed list of wallets to study |
+| **Grok (xAI)** | — | Official API | Vet narrative and shilling (30–60 s/query) |
