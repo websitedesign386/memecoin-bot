@@ -60,7 +60,8 @@ def enrich(pos: pd.DataFrame, ev: pd.DataFrame, px: pd.Series) -> pd.DataFrame:
     migrated = ev[ev.action == "migrate"].groupby("mint").ts.min().rename("migrated_ts")
     p = pos.merge(created, on="mint", how="left").merge(migrated, on="mint", how="left")
     held = (p.buy_tok - p.sell_tok).clip(lower=0)
-    p["mark_sol"] = held * p.mint.map(px).fillna(0)
+    # unsold tokens are marked at 50% of the last price: thin pools can't absorb a full exit at that price
+    p["mark_sol"] = 0.5 * held * p.mint.map(px).fillna(0)
     p["pnl"] = p.sell_sol + p.mark_sol - p.buy_sol
     p["ret"] = p.pnl / p.buy_sol.replace(0, np.nan)
     p["age_min_at_entry"] = (p.first_buy - p.created_ts) / 60_000
@@ -68,7 +69,8 @@ def enrich(pos: pd.DataFrame, ev: pd.DataFrame, px: pd.Series) -> pd.DataFrame:
     p["hold_min"] = (p.last_sell - p.first_buy) / 60_000
     p["is_creator"] = p.trader == p.creator
     p["partial_exit"] = p.n_sells >= 2
-    return p[p.buy_sol > 0]
+    # drop positions on absurdly priced pools (manipulated / non-standard tokens), which produce fake PnL
+    return p[(p.buy_sol > 0) & (p.entry_mcap.fillna(0) < 100_000)]
 
 
 def wallet_table(p: pd.DataFrame) -> pd.DataFrame:
@@ -84,8 +86,8 @@ def wallet_table(p: pd.DataFrame) -> pd.DataFrame:
 
 def trencher_like(w: pd.DataFrame) -> pd.Series:
     """Profitable humans, not bots/insiders: enough tokens, sane win rate, not instant flips, not creators."""
-    return ((w.tokens >= 15) & (w.tokens <= 400) & (w.pnl > 1) & (w.roi > 0.05) & w.win_rate.between(0.2, 0.8)
-            & (w.med_hold_min >= 1) & (w.creator_share < 0.2))
+    return ((w.tokens >= 20) & (w.tokens <= 300) & (w.pnl > 5) & w.roi.between(0.1, 10) & w.win_rate.between(0.2, 0.8)
+            & (w.med_size >= 0.1) & (w.med_hold_min >= 1) & (w.creator_share < 0.2))
 
 
 def profile(p: pd.DataFrame, who: pd.Index) -> dict:

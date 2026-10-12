@@ -335,7 +335,8 @@ def run(files: list[Path], ex: Exec, xs: Exits, strategies=STRATEGIES, eval_ever
     now = 0
     for f in files:
         tbl = pq.read_table(f, columns=COLS)
-        keep = pc.or_(pc.equal(tbl["pool"], "pump"), pc.equal(tbl["pool_created_by"], "pump"))
+        # or_kleene: a null pool_created_by (all curve rows) must not null-out the OR
+        keep = pc.or_kleene(pc.equal(tbl["pool"], "pump"), pc.equal(tbl["pool_created_by"], "pump"))
         tbl = tbl.filter(keep).sort_by("ts")
         for r in tbl.to_pylist():
             now = r["ts"]
