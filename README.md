@@ -61,6 +61,7 @@ Switch strategy with `--strategy volume_breakout`. All thresholds live in `.env`
 - [`docs/PLAN.md`](docs/PLAN.md): win-rate/EV analysis, how snipers are fast, the chosen strategy and roadmap
 - [`docs/INFRA.md`](docs/INFRA.md): how sniper bots work; Jito, Helius, Triton, SWQoS explained and what we use
 - [`docs/TRENCHING.md`](docs/TRENCHING.md): how pro trenchers trade, KOL data, and how we study and copy their logic
+- [`docs/RESULTS.md`](docs/RESULTS.md): 72-hour backtest of 5 strategies and the pro-wallet study
 - [`docs/GROK.md`](docs/GROK.md): what Grok adds, how it's wired in, and its limits
 
 ## Layout

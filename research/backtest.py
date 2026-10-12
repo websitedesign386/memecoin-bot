@@ -329,8 +329,9 @@ def hour_files(start: str | None = None, end: str | None = None) -> list[Path]:
     return [f for f in files if (not start or key(f) >= start) and (not end or key(f) < end)]
 
 
-def run(files: list[Path], ex: Exec, xs: Exits, strategies=STRATEGIES, eval_every_ms: int = 2000) -> dict[str, Book]:
-    books = {n: Book(n, fn, ex, xs) for n, fn in strategies.items()}
+def run(files: list[Path], ex: Exec, xs: Exits, strategies=STRATEGIES, eval_every_ms: int = 2000,
+        books: dict[str, Book] | None = None) -> dict[str, Book]:
+    books = books or {n: Book(n, fn, ex, xs) for n, fn in strategies.items()}
     tokens: dict[str, Token] = {}
     now = 0
     for f in files:
@@ -423,8 +424,8 @@ def summarize(b: Book, size: float) -> dict:
 
 def fmt(s: dict) -> str:
     if not s.get("trades"):
-        return f"{s['strategy']:<18} no trades"
-    return (f"{s['strategy']:<18} trades={s['trades']:<4} win={s['win_rate']:.0%}  avg_win={s['avg_win']:+.0%} "
+        return f"{s['strategy']:<26} no trades"
+    return (f"{s['strategy']:<26} trades={s['trades']:<4} win={s['win_rate']:.0%}  avg_win={s['avg_win']:+.0%} "
             f"avg_loss={s['avg_loss']:+.0%}  EV/trade={s['ev_per_trade']:+.1%}  median={s['median_ret']:+.0%}  "
             f"total={s['total_sol']:+.3f} SOL  maxDD={s['max_dd_sol']:.3f}  best={s['best']:+.0%} worst={s['worst']:+.0%}  exits={s['exits']}")
 
@@ -435,6 +436,7 @@ def main() -> None:
     ap.add_argument("--end")
     ap.add_argument("--split", action="store_true", help="report first and second half separately")
     ap.add_argument("--latency", type=float, default=1.5)
+    ap.add_argument("--sweep", action="store_true", help="exit-rule grid for early_trench and final_stretch")
     ap.add_argument("--smart", help="CSV of pro wallets (index = wallet) for smart_convergence; build it from EARLIER hours only")
     a = ap.parse_args()
     files = hour_files(a.start, a.end)
@@ -448,6 +450,18 @@ def main() -> None:
         print(f"loaded {len(SMART)} smart wallets")
     print(f"{len(files)} hours: {files[0].parent.name} {files[0].stem}h → {files[-1].parent.name} {files[-1].stem}h, "
           f"size {ex.size_sol} SOL, latency {ex.latency_s}s")
+    if a.sweep:
+        grid = {"base": Exits(), "sl40": Exits(stop_loss=0.40), "sl60": Exits(stop_loss=0.60),
+                "sl40_init50": Exits(stop_loss=0.40, take_initials_at=0.5),
+                "sl40_trail45": Exits(stop_loss=0.40, trail=0.45, trail_after=0.6),
+                "sl25_init50": Exits(take_initials_at=0.5), "sl40_hold30m": Exits(stop_loss=0.40, max_hold_s=1800)}
+        books = {f"{sn}/{gn}": Book(f"{sn}/{gn}", STRATEGIES[sn], ex, g)
+                 for sn in ("early_trench", "final_stretch") for gn, g in grid.items()}
+        run(files, ex, xs, books=books)
+        print()
+        for b in books.values():
+            print(fmt(summarize(b, ex.size_sol)))
+        return
     parts = [files[: len(files) // 2], files[len(files) // 2:]] if a.split else [files]
     for i, part in enumerate(parts):
         if a.split:
