@@ -49,3 +49,18 @@ over 72 h, trading ~50–75 tokens a day on the curve at ~70–90 SOL mcap and h
 
 Caveats: unsold tokens are marked at 50% of the last price. Wallet clusters (one person, many wallets) aren't merged.
 72 hours is one market regime.
+
+## Exit-rule sweep (tune on 1st half, check on 2nd half)
+
+| Variant | early_trench 1st | early_trench 2nd | final_stretch 1st | final_stretch 2nd |
+|---|---|---|---|---|
+| base (−25% stop) | +0.3% | −5.5% | +1.8% | −3.9% |
+| −40% stop | −0.9% | −8.5% | +5.0% | −5.6% |
+| −60% stop | −5.8% | −8.8% | +0.2% | −7.7% |
+| −40% stop, initials at +50% | −1.7% | −9.2% | +3.4% | −4.0% |
+| −40% stop, 45% trail after +60% | +1.0% | −5.9% | +3.1% | −8.1% |
+| −25% stop, initials at +50% | −0.1% | −5.4% | +0.8% | **−2.3%** |
+| −40% stop, 30-min max hold | −2.4% | −5.9% | **+5.7%** | −4.7% |
+
+The best first-half variant (final_stretch, −40% stop, 30-min hold: +5.7%/trade) lost −4.7%/trade on the second half.
+**No variant is positive out of sample.** Tuning exits doesn't create an edge; the entry signals don't have one.
